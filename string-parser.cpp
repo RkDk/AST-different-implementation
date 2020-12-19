@@ -1,11 +1,19 @@
 //
-//  tokenizer.cpp
+//  string-parser.cpp
 //  AST-different-implementation
 //
 //  Created by Rick Chou on 12/19/20.
 //
 
-#include "tokenizer.hpp"
+#include "string-parser.hpp"
+
+void parseExpression(std::vector<std::string> *tokens, int start, int *endPointer) {
+    
+}
+
+void buildAST(std::vector<std::string> *tokens, AST *astTree) {
+    
+}
 
 void tokenizer(std::string input, std::vector<std::string> *tokens) {
     std::string token = "";

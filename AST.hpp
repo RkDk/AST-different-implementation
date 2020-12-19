@@ -26,6 +26,7 @@ enum class NodeType {
 class AST {
 private:
     NodeType nodeType;
+    std::string targetName;
     std::string value;
 public:
     AST(NodeType);
