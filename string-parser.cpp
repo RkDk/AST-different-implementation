@@ -59,6 +59,15 @@ void runAST(AST *ast) {
             }
             break;
         }
+        case NodeType::VARIABLE_ASSIGNMENT: {
+            const std::string targetName = cur->getTargetName();
+            const AST *child = cur->getChild(0);
+            if(child) {
+                float value = evaluateExpression(child);
+                std::cout << "Assigning variable \"" << targetName << "\" value: " << value << "\n";
+            }
+            break;
+        }
         default: {
             return;
         }

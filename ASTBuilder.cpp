@@ -252,6 +252,7 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
             } else {
                 throw "Unexpected identifier";
             }
+            break;
         }
         case TokenType::UNKNOWN: {
             throw "Unknown token";
