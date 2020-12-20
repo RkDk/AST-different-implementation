@@ -12,6 +12,9 @@
 #include <string>
 #include <vector>
 
+bool isInteger(std::string);
+bool isNumber(std::string);
+bool isValidIdentifier(std::string);
 std::ostream &operator<<(std::ostream &, std::vector<std::string> &);
 
 #endif /* utils_hpp */

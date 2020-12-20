@@ -7,12 +7,12 @@
 
 #include "string-parser.hpp"
 
-void parseExpression(std::vector<std::string> *tokens, int start, int *endPointer) {
-    
-}
-
-void buildAST(std::vector<std::string> *tokens, AST *astTree) {
-    
+void getASTFromTokens(std::vector<std::string> *tokens, AST *astTree) {
+    for(size_t i = 0; i < (*tokens).size();) {
+        auto ip = i;
+        ASTBuilder(tokens, astTree, &ip);
+        i = ip;
+    }
 }
 
 void tokenizer(std::string input, std::vector<std::string> *tokens) {
@@ -25,12 +25,11 @@ void tokenizer(std::string input, std::vector<std::string> *tokens) {
         bool terminate = c == 0 || c == '\n';
         bool delim = !terminate && c == ' ';
         bool quotes = !terminate && !delim && (c == '\'' || c == '"');
-        bool tokenizeBoth = !terminate && !delim && !quotes && (c == '(' || c == ')' || c == '+' || c == '-' || c == '*' || c == '/');
+        bool tokenizeBoth = !terminate && !delim && !quotes && (c == '=' || c == '(' || c == ')' || c == '+' || c == '-' || c == '*' || c == '/');
         if(quotes) {
             if(!inString) {
                 quoteType = c;
                 inString = true;
-                continue;
             } else if(c == quoteType) {
                 termQuote = true;
                 inString = false;
@@ -39,6 +38,9 @@ void tokenizer(std::string input, std::vector<std::string> *tokens) {
         }
         if(terminate || termQuote || (!inString && (delim || tokenizeBoth))) {
             if(token.size()) {
+                if(termQuote) {
+                    token += c;
+                }
                 (*tokens).push_back(token);
                 token.clear();
             }
