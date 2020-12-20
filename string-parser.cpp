@@ -25,7 +25,7 @@ void tokenizer(std::string input, std::vector<std::string> *tokens) {
         bool terminate = c == 0 || c == '\n';
         bool delim = !terminate && c == ' ';
         bool quotes = !terminate && !delim && (c == '\'' || c == '"');
-        bool tokenizeBoth = !terminate && !delim && !quotes && (c == '=' || c == '(' || c == ')' || c == '+' || c == '-' || c == '*' || c == '/');
+        bool tokenizeBoth = !terminate && !delim && !quotes && (c == ';' || c == '=' || c == '(' || c == ')' || c == '+' || c == '-' || c == '*' || c == '/');
         if(quotes) {
             if(!inString) {
                 quoteType = c;

@@ -24,8 +24,38 @@ std::string getNodeTypeName(NodeType nodeType) {
     }
 }
 
-AST::AST(NodeType _nodeType) : nodeType(_nodeType) {
+AST::AST() {
+    assignId();
+}
 
+AST::AST(NodeType _nodeType) : nodeType(_nodeType) {
+    assignId();
+}
+
+void AST::assignId() {
+    static unsigned int globalId = 1;
+    if(nodeId == 0) {
+        nodeId = globalId++;
+    }
+}
+
+size_t AST::getChildCount() const {
+    return children.size();
+}
+
+AST *AST::getTopParent() {
+    if(!parent) {
+        return this;
+    }
+    return parent->getTopParent();
+}
+
+void AST::setParent(AST *node) {
+    parent = node;
+}
+
+AST *AST::getParent() {
+    return parent;
 }
 
 void AST::setTargetName(std::string s) {
@@ -36,11 +66,27 @@ std::string AST::getTargetName() const {
     return targetName;
 }
 
+void AST::clearValue() {
+    value.clear();
+}
+
 void AST::setValue(std::string s) {
     value = s;
 }
 
+void AST::swapChild(AST *oldChild, AST *newChild) {
+    for(size_t i = 0; i < children.size(); i++) {
+        if(children[i]->nodeId == oldChild->nodeId) {
+            newChild->parent = this;
+            oldChild->parent = NULL;
+            children[i] = newChild;
+            break;
+        }
+    }
+}
+
 void AST::addChild(AST *node) {
+    node->setParent(this);
     children.push_back(node);
 }
 
@@ -68,9 +114,17 @@ std::string AST::getStringValue() const {
 
 void AST::printData() const {
     std::cout << "=== AST Node ===\n";
+    std::cout << "ID: " << nodeId << "\n";
+    if(parent) {
+        std::cout << "Parent ID: " << parent->nodeId << "\n";
+    }
     std::cout << "Type: " << getNodeTypeName(nodeType) << "\n";
-    std::cout << "Target name: " << targetName << "\n";
-    std::cout << "Value: " << value << "\n";
+    if(!targetName.empty()) {
+        std::cout << "Target name: " << targetName << "\n";
+    }
+    if(!value.empty()) {
+        std::cout << "Value: " << value << "\n";
+    }
     std::cout << "=== End ===\n";
     for(auto it = children.begin(); it != children.end(); it++) {
         (*it)->printData();

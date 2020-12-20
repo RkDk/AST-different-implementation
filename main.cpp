@@ -10,7 +10,7 @@
 
 int main(int argc, const char * argv[]) {
     try {
-        std::string test = "number thisisMyVar=100";
+        std::string test = "number thisisMyVar=1+2+3;";
         std::vector<std::string> tokens;
         AST *astTree = new AST(NodeType::ROOT);
         tokenizer(test, &tokens);

@@ -10,6 +10,7 @@
 enum class TokenType {
     TERM_NUMBER,
     TERM_STRING,
+    SEMICOLON,
     OPERATOR_EQUAL,
     OPERATOR_PLUS,
     OPERATOR_MINUS,
@@ -29,6 +30,9 @@ TokenType getTokenType(std::string s) {
     }
     if(s == "string") {
         return TokenType::TERM_STRING;
+    }
+    if(s == ";") {
+        return TokenType::SEMICOLON;
     }
     if(s == "=") {
         return TokenType::OPERATOR_EQUAL;
@@ -74,7 +78,7 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
                 if(isValidIdentifier(nextToken)) {
                     AST *node = new AST(NodeType::VARIABLE_DECLARATION);
                     node->setTargetName(nextToken);
-                    context->ast->addChild(node);
+                    context->active = node;
                 } else {
                     throw "Invalid identifier for variable declaration";
                 }
@@ -86,30 +90,56 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
         case TokenType::TERM_STRING: {
             break;
         }
+        case TokenType::SEMICOLON: {
+            if(context->active) {
+                context->ast->addChild(context->active->getTopParent());
+                context->active = NULL;
+            } else {
+                throw "Unexpected semicolon";
+            }
+            break;
+        }
         case TokenType::OPERATOR_EQUAL: {
             AST *active = context->active;
             if(!active) {
-                AST *prev = context->ast->getPrevChild();
-                if(prev && prev->getNodeType() == NodeType::VARIABLE_DECLARATION) {
-                    AST *node = new AST(NodeType::VARIABLE_ASSIGNMENT);
-                    node->setTargetName(prev->getTargetName());
-                    context->active = node;
-                } else {
-                    throw "Unexpected assignment operator";
-                }
+                throw "Unexpected assignment operator";
             } else {
                 if(active->getNodeType() == NodeType::IDENTIFIER) {
                     active->setNodeType(NodeType::VARIABLE_ASSIGNMENT);
+                } else if(active->getNodeType() == NodeType::VARIABLE_DECLARATION) {
+                    AST *node = new AST(NodeType::EXPRESSION);
+                    active->addChild(node);
+                    context->active = node;
                 } else {
                     throw "Unexpected assignment operator";
                 }
             }
             break;
         }
-        case TokenType::OPERATOR_PLUS: {
-            break;
-        }
+        case TokenType::OPERATOR_PLUS:
         case TokenType::OPERATOR_MINUS: {
+            AST *active = context->active;
+            if(active) {
+                if(active->getNodeType() == NodeType::NUMBER) {
+                    active->setNodeType(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
+                    AST *lhs = new AST(NodeType::NUMBER);
+                    lhs->setValue(active->getStringValue());
+                    
+                    active->clearValue();
+                    active->addChild(lhs);
+                } else if(active->getNodeType() == NodeType::OPERATOR_PLUS || active->getNodeType() == NodeType::OPERATOR_MINUS) {
+                    AST *oldParent = active->getParent();
+                    AST *newParent = new AST(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
+                    if(oldParent) {
+                        oldParent->swapChild(active, newParent);
+                    }
+                    newParent->addChild(active);
+                    context->active = newParent;
+                    
+                }
+            } else {
+                throw "Unexpected math operator";
+            }
             break;
         }
         case TokenType::OPERATOR_MUL: {
@@ -126,9 +156,16 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
         }
         case TokenType::LITERAL_NUMBER: {
             if(context->active) {
-                context->active->setValue(token);
-                context->ast->addChild(context->active);
-                context->active = NULL;
+                if(context->active->getNodeType() == NodeType::OPERATOR_PLUS || context->active->getNodeType() == NodeType::OPERATOR_MINUS) {
+                    AST *node = new AST(NodeType::NUMBER);
+                    node->setValue(token);
+                    context->active->addChild(node);
+                } else if(context->active->getNodeType() == NodeType::EXPRESSION) {
+                    context->active->setNodeType(NodeType::NUMBER);
+                    context->active->setValue(token);
+                } else {
+                    throw "Unexpected number";
+                }
             } else {
                 throw "Unexpected number";
             }

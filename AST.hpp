@@ -29,19 +29,32 @@ enum class NodeType {
 
 class AST {
 private:
+    unsigned int nodeId = 0;
     NodeType nodeType = NodeType::UNKNOWN;
     std::vector<AST*> children;
+    AST *parent = NULL;
     std::string targetName;
     std::string value;
+    
+    void assignId();
+    
 public:
-    AST() = default;
+    AST();
     AST(NodeType);
+    
+    size_t getChildCount() const;
+    
+    AST *getTopParent();
+    AST *getParent();
+    void setParent(AST *);
     
     void setTargetName(std::string);
     std::string getTargetName() const;
     
+    void clearValue();
     void setValue(std::string);
     
+    void swapChild(AST *, AST *);
     void addChild(AST *);
     AST *getPrevChild() const;
     
