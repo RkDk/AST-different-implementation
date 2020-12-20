@@ -7,6 +7,67 @@
 
 #include "string-parser.hpp"
 
+float evaluateExpression(const AST *ast) {
+    if(ast->getChildCount() == 0) {
+        if(ast->getNodeType() == NodeType::NUMBER) {
+            return ast->getNumberValue();
+        }
+        return 0.0f;
+    }
+    if(ast->getNodeType() == NodeType::EXPRESSION) {
+        return evaluateExpression(ast->getChild(0));
+    }
+    if(ast->getNodeType() == NodeType::OPERATOR_PLUS) {
+        float lhs = evaluateExpression(ast->getChild(0));
+        float rhs = evaluateExpression(ast->getChild(1));
+        return lhs+rhs;
+    }
+    if(ast->getNodeType() == NodeType::OPERATOR_MINUS) {
+        float lhs = evaluateExpression(ast->getChild(0));
+        float rhs = evaluateExpression(ast->getChild(1));
+        return lhs-rhs;
+    }
+    if(ast->getNodeType() == NodeType::OPERATOR_MUL) {
+        float lhs = evaluateExpression(ast->getChild(0));
+        float rhs = evaluateExpression(ast->getChild(1));
+        return lhs*rhs;
+    }
+    if(ast->getNodeType() == NodeType::OPERATOR_DIV) {
+        float lhs = evaluateExpression(ast->getChild(0));
+        float rhs = evaluateExpression(ast->getChild(1));
+        return lhs/rhs;
+    }
+    return 0.0f;
+}
+
+void runAST(AST *ast) {
+    const AST *cur = ast;
+    const NodeType nodeType = cur->getNodeType();
+    switch(nodeType) {
+        case NodeType::ROOT: {
+            std::cout << "Entering root document\n";
+            break;
+        }
+        case NodeType::VARIABLE_DECLARATION: {
+            const std::string targetName = cur->getTargetName();
+            const AST *child = cur->getChild(0);
+            if(child) {
+                float value = evaluateExpression(child);
+                std::cout << "Declaring variable \"" << targetName << "\" with initial value: " << value << "\n";
+            } else {
+                std::cout << "Declaring variable \"" << targetName << "\"\n";
+            }
+            break;
+        }
+        default: {
+            return;
+        }
+    }
+    for(size_t i = 0; i < cur->getChildCount(); i++) {
+        runAST(cur->getChild(i));
+    }
+}
+
 void getASTFromTokens(std::vector<std::string> *tokens, AST *astTree) {
     for(size_t i = 0; i < (*tokens).size();) {
         auto ip = i;

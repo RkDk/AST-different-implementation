@@ -35,7 +35,7 @@ private:
     AST *parent = NULL;
     std::string targetName;
     std::string value;
-    
+    bool hasOpenParen = false;
     void assignId();
     
 public:
@@ -44,8 +44,11 @@ public:
     
     size_t getChildCount() const;
     
+    bool getHasOpenParen() const;
+    void setHasOpenParen(bool);
+    
     AST *getTopParent();
-    AST *getParent();
+    AST *getParent() const;
     void setParent(AST *);
     
     void setTargetName(std::string);
@@ -56,7 +59,7 @@ public:
     
     void swapChild(AST *, AST *);
     void addChild(AST *);
-    AST *getPrevChild() const;
+    AST *getChild(size_t) const;
     
     void setNodeType(NodeType);
     NodeType getNodeType() const;

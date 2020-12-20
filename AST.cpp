@@ -39,13 +39,21 @@ void AST::assignId() {
     }
 }
 
+void AST::setHasOpenParen(bool b) {
+    hasOpenParen = b;
+}
+
+bool AST::getHasOpenParen() const {
+    return hasOpenParen;
+}
+
 size_t AST::getChildCount() const {
     return children.size();
 }
 
 AST *AST::getTopParent() {
     if(!parent) {
-        return this;
+        return this; 
     }
     return parent->getTopParent();
 }
@@ -54,7 +62,7 @@ void AST::setParent(AST *node) {
     parent = node;
 }
 
-AST *AST::getParent() {
+AST *AST::getParent() const {
     return parent;
 }
 
@@ -90,11 +98,11 @@ void AST::addChild(AST *node) {
     children.push_back(node);
 }
 
-AST* AST::getPrevChild() const {
-    if(children.size() == 0) {
+AST* AST::getChild(size_t i) const {
+    if(i < 0 || i >= children.size()) {
         return NULL;
     }
-    return children[children.size()-1];
+    return children[i];
 }
 
 void AST::setNodeType(NodeType t) {

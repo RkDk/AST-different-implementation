@@ -14,6 +14,7 @@
 #include <vector>
 #include <string>
 
+void runAST(AST *);
 void getASTFromTokens(std::vector<std::string> *, AST *);
 void tokenizer(std::string, std::vector<std::string> *);
 

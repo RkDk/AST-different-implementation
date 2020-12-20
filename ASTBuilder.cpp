@@ -92,7 +92,16 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
         }
         case TokenType::SEMICOLON: {
             if(context->active) {
-                context->ast->addChild(context->active->getTopParent());
+                AST *parent = context->active;
+                bool openParen = parent->getHasOpenParen();
+                while(parent->getParent()) {
+                    parent = parent->getParent();
+                    openParen = openParen || parent->getHasOpenParen();
+                }
+                if(openParen) {
+                    throw "Expression has unclosed paranthesis";
+                }
+                context->ast->addChild(parent);
                 context->active = NULL;
             } else {
                 throw "Unexpected semicolon";
@@ -106,6 +115,9 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
             } else {
                 if(active->getNodeType() == NodeType::IDENTIFIER) {
                     active->setNodeType(NodeType::VARIABLE_ASSIGNMENT);
+                    AST *node = new AST(NodeType::EXPRESSION);
+                    active->addChild(node);
+                    context->active = node;
                 } else if(active->getNodeType() == NodeType::VARIABLE_DECLARATION) {
                     AST *node = new AST(NodeType::EXPRESSION);
                     active->addChild(node);
@@ -120,14 +132,17 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
         case TokenType::OPERATOR_MINUS: {
             AST *active = context->active;
             if(active) {
-                if(active->getNodeType() == NodeType::NUMBER) {
+                NodeType nodeType = active->getNodeType();
+                if(nodeType == NodeType::EXPRESSION) {
                     active->setNodeType(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
-                    AST *lhs = new AST(NodeType::NUMBER);
+                }
+                else if(active->getChildCount() == 0 && (nodeType == NodeType::NUMBER || nodeType == NodeType::IDENTIFIER)) {
+                    active->setNodeType(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
+                    AST *lhs = new AST(nodeType);
                     lhs->setValue(active->getStringValue());
-                    
                     active->clearValue();
                     active->addChild(lhs);
-                } else if(active->getNodeType() == NodeType::OPERATOR_PLUS || active->getNodeType() == NodeType::OPERATOR_MINUS) {
+                } else if(active->getChildCount() == 2) {
                     AST *oldParent = active->getParent();
                     AST *newParent = new AST(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
                     if(oldParent) {
@@ -135,28 +150,83 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
                     }
                     newParent->addChild(active);
                     context->active = newParent;
-                    
+                } else {
+                    throw "Unexpected math operator";
                 }
             } else {
                 throw "Unexpected math operator";
             }
             break;
         }
-        case TokenType::OPERATOR_MUL: {
-            break;
-        }
+        case TokenType::OPERATOR_MUL:
         case TokenType::OPERATOR_DIV: {
+            AST *active = context->active;
+            if(active) {
+                NodeType nodeType = active->getNodeType();
+                if(nodeType == NodeType::EXPRESSION) {
+                    active->setNodeType(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
+                }
+                else if(active->getChildCount() == 0 && (nodeType == NodeType::NUMBER || nodeType == NodeType::IDENTIFIER)) {
+                    active->setNodeType(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
+                    AST *lhs = new AST(nodeType);
+                    lhs->setValue(active->getStringValue());
+                    active->clearValue();
+                    active->addChild(lhs);
+                } else if(active->getChildCount() == 2) {
+                    if(active->getNodeType() == NodeType::OPERATOR_PLUS ||active->getNodeType() == NodeType::OPERATOR_MINUS) {
+                        AST *child = active->getChild(1);
+                        AST *oldParent = active;
+                        AST *newParent = new AST(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
+                        if(oldParent) {
+                            oldParent->swapChild(child, newParent);
+                        }
+                        newParent->addChild(child);
+                        context->active = newParent;
+                    } else {
+                        AST *oldParent = active->getParent();
+                        AST *newParent = new AST(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
+                        if(oldParent) {
+                            oldParent->swapChild(active, newParent);
+                        }
+                        newParent->addChild(active);
+                        context->active = newParent;
+                    }
+                } else {
+                    throw "Unexpected math operator";
+                }
+            } else {
+                throw "Unexpected math operator";
+            }
             break;
         }
         case TokenType::OPERATOR_PAREN_L: {
+            if(context->active) {
+                AST *node = new AST(NodeType::EXPRESSION);
+                context->active->addChild(node);
+                context->active->setHasOpenParen(true);
+                context->active = node;
+            } else {
+                throw "Unexpected paranthesis";
+            }
             break;
         }
         case TokenType::OPERATOR_PAREN_R: {
+            if(context->active && context->active->getParent()) {
+                do {
+                    if(!context->active->getParent()) {
+                        throw "Unexpected closing paranthesis";
+                    }
+                    context->active = context->active->getParent();
+                } while(!context->active->getHasOpenParen());
+                context->active->setHasOpenParen(false);
+            } else {
+                throw "Unexpected paranthesis";
+            }
             break;
         }
         case TokenType::LITERAL_NUMBER: {
             if(context->active) {
-                if(context->active->getNodeType() == NodeType::OPERATOR_PLUS || context->active->getNodeType() == NodeType::OPERATOR_MINUS) {
+                if(context->active->getNodeType() == NodeType::OPERATOR_PLUS || context->active->getNodeType() == NodeType::OPERATOR_MINUS || context->active->getNodeType() == NodeType::OPERATOR_MUL || context->active->getNodeType() == NodeType::OPERATOR_DIV) {
                     AST *node = new AST(NodeType::NUMBER);
                     node->setValue(token);
                     context->active->addChild(node);

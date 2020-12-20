@@ -10,7 +10,7 @@
 
 int main(int argc, const char * argv[]) {
     try {
-        std::string test = "number thisisMyVar=1+2+3;";
+        std::string test = "number thisisMyVar=1+(2*3+5+(1+3/5)*3+((3)-1)+5)/7 * (2+1) * 3 + 5 / 7 / 7 + 8;";
         std::vector<std::string> tokens;
         AST *astTree = new AST(NodeType::ROOT);
         tokenizer(test, &tokens);
@@ -19,9 +19,10 @@ int main(int argc, const char * argv[]) {
             std::cout << *it << "\n";
         }*/
         getASTFromTokens(&tokens, astTree);
-        astTree->printData();
+        runAST(astTree);
+        //astTree->printData();
     } catch( const char* e ) {
-        std::cout << "Exception: " << e;
+        std::cout << "Exception: " << e << "\n";
     }
     return 0;
 }
