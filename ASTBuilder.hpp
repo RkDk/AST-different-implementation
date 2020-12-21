@@ -14,17 +14,17 @@
 #include "utils.hpp"
 
 struct ASTBuilderContext {
-    std::vector<std::string> *tokens;
-    AST *ast;
-    AST *active;
-    size_t startIdx;
-    size_t *endPtr;
-    std::string getToken(size_t idx) {
-        if(idx < 0 || idx >= (*tokens).size()) {
-            return "";
-        }
-        return (*tokens)[idx];
+  std::vector<std::string> *tokens;
+  AST *ast;
+  AST *active;
+  size_t startIdx;
+  size_t *endPtr;
+  std::string getToken(size_t idx) {
+    if(idx < 0 || idx >= (*tokens).size()) {
+      return "";
     }
+    return (*tokens)[idx];
+  }
 };
 
 void ASTBuilder(std::vector<std::string> *, AST *, size_t *, int = -1);
