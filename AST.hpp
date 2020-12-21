@@ -59,6 +59,7 @@ public:
   
   void swapChild(AST *, AST *);
   void addChild(AST *);
+  void addAsParent(AST *);
   AST *getChild(size_t) const;
   
   void setNodeType(NodeType);

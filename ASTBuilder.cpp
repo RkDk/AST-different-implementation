@@ -24,6 +24,31 @@ enum class TokenType {
   UNKNOWN
 };
 
+bool isMathOpNode(NodeType nodeType) {
+  return (nodeType == NodeType::OPERATOR_PLUS ||
+          nodeType == NodeType::OPERATOR_MINUS ||
+          nodeType == NodeType::OPERATOR_MUL ||
+          nodeType == NodeType::OPERATOR_DIV);
+}
+
+bool isPlusMinusMathOpNode(NodeType nodeType) {
+  return (nodeType == NodeType::OPERATOR_PLUS || nodeType == NodeType::OPERATOR_MINUS);
+}
+
+bool isValidMathOperand(NodeType nodeType) {
+  return (nodeType == NodeType::NUMBER || nodeType == NodeType::IDENTIFIER);
+}
+
+NodeType getMathOpNodeType(TokenType tokenType) {
+  switch(tokenType) {
+    case TokenType::OPERATOR_PLUS: return NodeType::OPERATOR_PLUS;
+    case TokenType::OPERATOR_MINUS: return NodeType::OPERATOR_MINUS;
+    case TokenType::OPERATOR_MUL: return NodeType::OPERATOR_MUL;
+    case TokenType::OPERATOR_DIV: return NodeType::OPERATOR_DIV;
+    default: return NodeType::UNKNOWN;
+  }
+}
+
 TokenType getTokenType(std::string s) {
   if(s == "number") {
     return TokenType::TERM_NUMBER;
@@ -67,7 +92,6 @@ TokenType getTokenType(std::string s) {
   return TokenType::UNKNOWN;
 }
 
-
 void processToken(ASTBuilderContext *context, size_t *endPtr) {
   const std::string token = context->getToken(*endPtr);
   const TokenType tokenType = getTokenType(token);
@@ -110,9 +134,7 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
     }
     case TokenType::OPERATOR_EQUAL: {
       AST *active = context->active;
-      if(!active) {
-        throw "Unexpected assignment operator";
-      } else {
+      if(active) {
         if(active->getNodeType() == NodeType::IDENTIFIER) {
           active->setNodeType(NodeType::VARIABLE_ASSIGNMENT);
           AST *node = new AST(NodeType::EXPRESSION);
@@ -125,6 +147,8 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
         } else {
           throw "Unexpected assignment operator";
         }
+      } else {
+        throw "Unexpected assignment operator";
       }
       break;
     }
@@ -133,23 +157,15 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
       AST *active = context->active;
       if(active) {
         NodeType nodeType = active->getNodeType();
-        if(nodeType == NodeType::EXPRESSION) {
-          active->setNodeType(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
+        if(nodeType == NodeType::EXPRESSION && active->getChildCount() == 1) {
+          active->setNodeType(getMathOpNodeType(tokenType));
         }
-        else if(active->getChildCount() == 0 && (nodeType == NodeType::NUMBER || nodeType == NodeType::IDENTIFIER)) {
-          active->setNodeType(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
-          AST *lhs = new AST(nodeType);
-          lhs->setValue(active->getStringValue());
-          active->clearValue();
-          active->addChild(lhs);
-        } else if(active->getChildCount() == 2) {
-          AST *oldParent = active->getParent();
-          AST *newParent = new AST(tokenType == TokenType::OPERATOR_PLUS? NodeType::OPERATOR_PLUS : NodeType::OPERATOR_MINUS);
-          if(oldParent) {
-            oldParent->swapChild(active, newParent);
-          }
-          newParent->addChild(active);
-          context->active = newParent;
+        else if(
+          (active->getChildCount() == 0 && isValidMathOperand(nodeType)) ||
+          (active->getChildCount() == 2 && isMathOpNode(nodeType))) {
+          AST *node = new AST(getMathOpNodeType(tokenType));
+          active->addAsParent(node);
+          context->active = node;
         } else {
           throw "Unexpected math operator";
         }
@@ -163,34 +179,16 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
       AST *active = context->active;
       if(active) {
         NodeType nodeType = active->getNodeType();
-        if(nodeType == NodeType::EXPRESSION) {
-          active->setNodeType(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
+        if(nodeType == NodeType::EXPRESSION && active->getChildCount() == 1) {
+          active->setNodeType(getMathOpNodeType(tokenType));
         }
-        else if(active->getChildCount() == 0 && (nodeType == NodeType::NUMBER || nodeType == NodeType::IDENTIFIER)) {
-          active->setNodeType(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
-          AST *lhs = new AST(nodeType);
-          lhs->setValue(active->getStringValue());
-          active->clearValue();
-          active->addChild(lhs);
-        } else if(active->getChildCount() == 2) {
-          if(active->getNodeType() == NodeType::OPERATOR_PLUS ||active->getNodeType() == NodeType::OPERATOR_MINUS) {
-            AST *child = active->getChild(1);
-            AST *oldParent = active;
-            AST *newParent = new AST(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
-            if(oldParent) {
-              oldParent->swapChild(child, newParent);
-            }
-            newParent->addChild(child);
-            context->active = newParent;
-          } else {
-            AST *oldParent = active->getParent();
-            AST *newParent = new AST(tokenType == TokenType::OPERATOR_MUL? NodeType::OPERATOR_MUL : NodeType::OPERATOR_DIV);
-            if(oldParent) {
-              oldParent->swapChild(active, newParent);
-            }
-            newParent->addChild(active);
-            context->active = newParent;
-          }
+        else if(
+          (active->getChildCount() == 0 && isValidMathOperand(nodeType)) ||
+          (active->getChildCount() == 2 && isMathOpNode(nodeType))) {
+          AST *node = new AST(getMathOpNodeType(tokenType));
+          AST *target = (active->getChildCount() == 2 && isPlusMinusMathOpNode(nodeType))? active->getChild(1) : active;
+          target->addAsParent(node);
+          context->active = node;
         } else {
           throw "Unexpected math operator";
         }
@@ -201,24 +199,38 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
     }
     case TokenType::OPERATOR_PAREN_L: {
       if(context->active) {
-        AST *node = new AST(NodeType::EXPRESSION);
-        context->active->addChild(node);
-        context->active->setHasOpenParen(true);
-        context->active = node;
+        NodeType nodeType = context->active->getNodeType();
+        if((nodeType == NodeType::EXPRESSION && context->active->getChildCount() == 0) ||
+           (isMathOpNode(nodeType) && context->active->getChildCount() == 1)) {
+          AST *node = new AST(NodeType::EXPRESSION);
+          context->active->addChild(node);
+          context->active->setHasOpenParen(true);
+          context->active = node;
+        } else {
+          throw "Unexpected paranthesis";
+        }
       } else {
         throw "Unexpected paranthesis";
       }
       break;
     }
     case TokenType::OPERATOR_PAREN_R: {
-      if(context->active && context->active->getParent()) {
-        do {
-          if(!context->active->getParent()) {
-            throw "Unexpected closing paranthesis";
-          }
-          context->active = context->active->getParent();
-        } while(!context->active->getHasOpenParen());
-        context->active->setHasOpenParen(false);
+      if(context->active) {
+        NodeType nodeType = context->active->getNodeType();
+        if((nodeType == NodeType::EXPRESSION && context->active->getChildCount() == 1) ||
+           (isMathOpNode(nodeType) && context->active->getChildCount() == 2) ||
+           isValidMathOperand(nodeType)) {
+          do {
+            if(!context->active->getParent()) {
+              throw "Unexpected closing paranthesis";
+            }
+            context->active = context->active->getParent();
+          } while(!context->active->getHasOpenParen());
+          context->active->setHasOpenParen(false);
+        } else {
+          
+          throw "Unexpected paranthesis";
+        }
       } else {
         throw "Unexpected paranthesis";
       }
@@ -226,11 +238,13 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
     }
     case TokenType::LITERAL_NUMBER: {
       if(context->active) {
-        if(context->active->getNodeType() == NodeType::OPERATOR_PLUS || context->active->getNodeType() == NodeType::OPERATOR_MINUS || context->active->getNodeType() == NodeType::OPERATOR_MUL || context->active->getNodeType() == NodeType::OPERATOR_DIV) {
+        NodeType nodeType = context->active->getNodeType();
+        size_t childCount = context->active->getChildCount();
+        if(isMathOpNode(nodeType) && childCount == 1) {
           AST *node = new AST(NodeType::NUMBER);
           node->setValue(token);
           context->active->addChild(node);
-        } else if(context->active->getNodeType() == NodeType::EXPRESSION) {
+        } else if(nodeType == NodeType::EXPRESSION && childCount == 0) {
           context->active->setNodeType(NodeType::NUMBER);
           context->active->setValue(token);
         } else {

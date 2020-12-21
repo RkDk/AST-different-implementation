@@ -93,6 +93,14 @@ void AST::swapChild(AST *oldChild, AST *newChild) {
   }
 }
 
+void AST::addAsParent(AST *newParent) {
+  AST *oldParent = parent;
+  if(oldParent) {
+    oldParent->swapChild(this, newParent);
+  }
+  newParent->addChild(this);
+}
+
 void AST::addChild(AST *node) {
   node->setParent(this);
   children.push_back(node);
