@@ -116,6 +116,11 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
     }
     case TokenType::SEMICOLON: {
       if(context->active) {
+        NodeType nodeType = context->active->getNodeType();
+        size_t childCount = context->active->getChildCount();
+        if(isMathOpNode(nodeType) && childCount < 2) {
+          throw "Incomplete math operation";
+        }
         AST *parent = context->active;
         bool openParen = parent->getHasOpenParen();
         while(parent->getParent()) {
@@ -124,6 +129,9 @@ void processToken(ASTBuilderContext *context, size_t *endPtr) {
         }
         if(openParen) {
           throw "Expression has unclosed paranthesis";
+        }
+        if(parent->getNodeType() != NodeType::VARIABLE_ASSIGNMENT && parent->getNodeType() != NodeType::VARIABLE_DECLARATION) {
+          throw "Invalid statement";
         }
         context->ast->addChild(parent);
         context->active = NULL;
